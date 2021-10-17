@@ -20,6 +20,7 @@ type conf struct {
 	Privkey string
 	RawLog string
 	UsersLog string
+	Parameter string
 }
 
 func check(err error) {
