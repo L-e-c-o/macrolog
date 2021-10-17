@@ -1,1 +1,10 @@
 2021/10/16 19:24:03 lecolastico 88.163.52.203:46944 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+2021/10/17 18:34:47 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:35:13 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:35:39 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:35:47 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:35:55 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:36:03 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:37:13 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:39:24 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory
+2021/10/17 18:39:38 open /etc/letsencrypt/live/error.network/fullchain.pem: no such file or directory

@@ -3,19 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"fmt"
 )
 
-var channel = make(chan string)
-var channelId = make(chan string)
-
-type conf struct {
+type Conf struct {
 	ListenUrl string
 	Fullchain string
 	Privkey string
@@ -24,21 +21,43 @@ type conf struct {
 	Parameter string
 }
 
+var channel = make(chan string)
+var config Conf
+
+func banner() {
+	fmt.Print(`
+
+
+                                                      $$\                     
+                                                      $$ |                    
+$$$$$$\$$$$\   $$$$$$\   $$$$$$$\  $$$$$$\   $$$$$$\  $$ | $$$$$$\   $$$$$$\  
+$$  _$$  _$$\  \____$$\ $$  _____|$$  __$$\ $$  __$$\ $$ |$$  __$$\ $$  __$$\ 
+$$ / $$ / $$ | $$$$$$$ |$$ /      $$ |  \__|$$ /  $$ |$$ |$$ /  $$ |$$ /  $$ |
+$$ | $$ | $$ |$$  __$$ |$$ |      $$ |      $$ |  $$ |$$ |$$ |  $$ |$$ |  $$ |
+$$ | $$ | $$ |\$$$$$$$ |\$$$$$$$\ $$ |      \$$$$$$  |$$ |\$$$$$$  |\$$$$$$$ |
+\__| \__| \__| \_______| \_______|\__|       \______/ \__| \______/  \____$$ |
+                                                                    $$\   $$ |
+                                                                    \$$$$$$  |
+                                                                     \______/ 
+                                                                              
+	 	      made with  ♥  by leco & atsika
+			   
+`)
+}
+
 func check(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
-func getConfig() conf {
+func getConfig() error {
 	c, err := ioutil.ReadFile("config.json")
 	check(err)
-	var config conf
 	err = json.Unmarshal(c, &config)
 	check(err)
-	
 
-	return config
+	return err
 }
 
 func contains(slice []string, pattern string) bool {
@@ -50,8 +69,8 @@ func contains(slice []string, pattern string) bool {
 	return false
 }
 
-func load(usersLog string) (*os.File, []string) {
-	file, err := os.OpenFile(usersLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func load() (*os.File, []string) {
+	file, err := os.OpenFile(config.UsersLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	check(err)
 	buff := new(bytes.Buffer)
 	buff.ReadFrom(file)
@@ -61,8 +80,8 @@ func load(usersLog string) (*os.File, []string) {
 	return file, users
 }
 
-func initLog(rawLog string) *os.File {
-	f, err := os.OpenFile(rawLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func initLog() *os.File {
+	f, err := os.OpenFile(config.RawLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	check(err)
 	wrt := io.MultiWriter(os.Stdout, f)
     log.SetOutput(wrt)
@@ -71,9 +90,8 @@ func initLog(rawLog string) *os.File {
 
 func handleRequest(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodGet {  
-		parameter := <-channelID
 		param := req.URL.Query()
-		if user, ok := param[parameter]; ok {
+		if user, ok := param[config.Parameter]; ok {
 			log.Println(user[0], req.RemoteAddr, "\""+req.UserAgent()+"\"")
 			channel <-user[0]
 			w.WriteHeader(http.StatusOK)
@@ -101,16 +119,17 @@ func checkUser(users []string, fUsers *os.File) {
 }
 
 func main() {
+	banner()
 	fmt.Println("starting....")
 	
-	config := getConfig()
-	
-	channelId <-config.Prameter
+	if err := getConfig(); err != nil {
+		log.Fatal(err)
+	}
 
-	fLog := initLog(config.RawLog)	
+	fLog := initLog()	
 	defer fLog.Close()
 
-	fUsers, users := load(config.UsersLog)
+	fUsers, users := load()
 	defer fUsers.Close()	
 
 	go checkUser(users, fUsers)
