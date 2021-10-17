@@ -13,6 +13,7 @@ import (
 )
 
 var channel = make(chan string)
+var channelId = make(chan string)
 
 type conf struct {
 	ListenUrl string
@@ -70,8 +71,9 @@ func initLog(rawLog string) *os.File {
 
 func handleRequest(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodGet {  
+		parameter := <-channelID
 		param := req.URL.Query()
-		if user, ok := param["id"]; ok {
+		if user, ok := param[parameter]; ok {
 			log.Println(user[0], req.RemoteAddr, "\""+req.UserAgent()+"\"")
 			channel <-user[0]
 			w.WriteHeader(http.StatusOK)
@@ -102,6 +104,8 @@ func main() {
 	fmt.Println("starting....")
 	
 	config := getConfig()
+	
+	channelId <-config.Prameter
 
 	fLog := initLog(config.RawLog)	
 	defer fLog.Close()
