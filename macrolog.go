@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 	"fmt"
-
-	"github.com/gorilla/mux"
 )
 
 var channel = make(chan string)
