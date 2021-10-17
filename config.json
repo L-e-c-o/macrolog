@@ -1,0 +1,7 @@
+{
+	"ListenUrl": "0.0.0.0:4443",
+	"Fullchain": "/etc/letsencrypt/live/error.network/fullchain.pem",
+  	"Privkey": "/etc/letsencrypt/live/error.network/privkey.pem",
+  	"RawLog": "raw.log",
+  	"UsersLog": "users.log"
+}
