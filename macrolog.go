@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 type Conf struct {
@@ -19,6 +22,8 @@ type Conf struct {
 	RawLog string
 	UsersLog string
 	Parameter string
+	Method string
+	Route string
 }
 
 var channel = make(chan string)
@@ -43,6 +48,7 @@ $$ | $$ | $$ |\$$$$$$$ |\$$$$$$$\ $$ |      \$$$$$$  |$$ |\$$$$$$  |\$$$$$$$ |
 	 	      made with  ♥  by leco & atsika
 			   
 `)
+
 }
 
 func check(err error) {
@@ -72,36 +78,41 @@ func contains(slice []string, pattern string) bool {
 func load() (*os.File, []string) {
 	file, err := os.OpenFile(config.UsersLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	check(err)
+	
 	buff := new(bytes.Buffer)
 	buff.ReadFrom(file)
 	check(err)
-	users := strings.Split(buff.String(), "\n")
+	
+	var users []string
+	if len(buff.Bytes()) != 0 { 
+		users = strings.Split(buff.String(), "\n")
+	}
 
 	return file, users
 }
 
-func initLog() *os.File {
+func initLog() {
 	f, err := os.OpenFile(config.RawLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	check(err)
 	wrt := io.MultiWriter(os.Stdout, f)
     log.SetOutput(wrt)
-	return f
+
 }
 
 func handleRequest(w http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodGet {  
-		param := req.URL.Query()
-		if user, ok := param[config.Parameter]; ok {
-			log.Println(user[0], req.RemoteAddr, "\""+req.UserAgent()+"\"")
-			channel <-user[0]
+	err := req.ParseForm()
+	check(err)
+
+	user := strings.TrimSuffix(req.PostForm.Get("cmdOutput"), "\r\n")
+	
+	if user != "" {
+			log.Println(user, req.RemoteAddr, "\""+req.UserAgent()+"\"")
+			channel <-user
 			w.WriteHeader(http.StatusOK)
 			return
 		} else {
 			goto EXIT
 		}
-	} else { 
-		goto EXIT
-	}
 	EXIT:
 		http.NotFound(w, req)
 }
@@ -109,6 +120,7 @@ func handleRequest(w http.ResponseWriter, req *http.Request) {
 func checkUser(users []string, fUsers *os.File) {
 	for {
 		user := <-channel
+
 		if !contains(users, user){
 			users = append(users, user)
 			if _, err := fUsers.WriteString(user+"\n"); err != nil {
@@ -116,6 +128,28 @@ func checkUser(users []string, fUsers *os.File) {
 			}	
 		} 
 	}
+}
+
+func configTls(mux *mux.Router) *http.Server {
+	cfg := &tls.Config{
+		MinVersion:               tls.VersionTLS12,
+		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+		PreferServerCipherSuites: true,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		},
+	}
+	srv := &http.Server{
+		Addr:         config.ListenUrl,
+		Handler:      mux,
+		TLSConfig:    cfg,
+		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)),
+	}
+
+	return srv
 }
 
 func main() {
@@ -126,16 +160,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fLog := initLog()	
-	defer fLog.Close()
+	initLog()
 
 	fUsers, users := load()
-	defer fUsers.Close()	
 
 	go checkUser(users, fUsers)
+	
+	r := mux.NewRouter()
+	r.HandleFunc(config.Route, handleRequest).Methods(config.Method)
 
-	http.HandleFunc("/", handleRequest)
+	srv := configTls(r)
 
-	err := http.ListenAndServeTLS(config.ListenUrl, config.Fullchain, config.Privkey, nil)
-	check(err)
+	log.Fatal(srv.ListenAndServeTLS(config.Fullchain, config.Privkey))
 }

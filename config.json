@@ -1,8 +1,11 @@
 {
-	"ListenUrl": "0.0.0.0:4443",
-	"Fullchain": "/etc/letsencrypt/live/error.network/fullchain.pem",
-  	"Privkey": "/etc/letsencrypt/live/error.network/privkey.pem",
+	"ListenUrl": "0.0.0.0:443",
+	"Fullchain": "/etc/letsencrypt/live/verify.redirect3.com/fullchain.pem",
+  	"Privkey": "/etc/letsencrypt/live/verify.redirect3.com/privkey.pem",
   	"RawLog": "raw.log",
   	"UsersLog": "users.log",
-	"Parameter": "q"
+	"Parameter": "cmdOutput",
+	"Method":"POST",
+	"Route":"/"
+
 }
