@@ -100,19 +100,23 @@ func initLog() {
 }
 
 func handleRequest(w http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
-	check(err)
-
-	user := strings.TrimSuffix(req.PostForm.Get("cmdOutput"), "\r\n")
-	
+	var user string
+	if config.Method == http.MethodPost { 
+		err := req.ParseForm()
+		check(err)
+		user = strings.TrimSuffix(req.PostForm.Get(config.Parameter), "\r\n")
+	} else if config.Method == http.MethodGet {
+		param := req.URL.Query()
+		user = param[config.Parameter][0]	
+	}
 	if user != "" {
-			log.Println(user, req.RemoteAddr, "\""+req.UserAgent()+"\"")
-			channel <-user
-			w.WriteHeader(http.StatusOK)
-			return
-		} else {
-			goto EXIT
-		}
+		log.Println(user, req.RemoteAddr, "\""+req.UserAgent()+"\"")
+		channel <-user
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		goto EXIT
+	}
 	EXIT:
 		http.NotFound(w, req)
 }
